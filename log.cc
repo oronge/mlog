@@ -19,7 +19,7 @@ struct LogMeta {
 
 	std::map<LogLevel, std::string> log_level_prompts;
 	std::map<LogLevel, std::string> log_level_strs;
-	std::map<LogLevel, int32_t> log_level_files;
+	std::map<LogLevel, FILE*> log_level_files;
 	std::map<LogLevel, pthread_mutex_t*> log_level_mutexes_;
 	pthread_mutex_t *screen_mutex_;
 	
@@ -59,8 +59,8 @@ LogMeta::~LogMeta() {
 	LogLevel level;
 	for (uint32_t idx = kTrace; idx < kMaxLevel; ++idx) {	
 		level = static_cast<LogLevel>(idx);
-		if (log_level_files[level] > 0) {
-			close(log_level_files[level]);
+		if (log_level_files[level]) {
+			fclose(log_level_files[level]);
 		}
 		pthread_mutex_destroy(log_level_mutexes_[level]);
 		delete log_level_mutexes_[level];
@@ -127,18 +127,18 @@ void Init(const LogLevel level, const std::string &log_dir, const std::string &f
 	}
 
 	std::string file_name;
-	int32_t fd;
+	FILE *file;
 	for (int32_t idx = kInfo; idx < kMaxLevel; ++idx) {
 		file_name = file_prefix.empty() ? "" : (file_prefix + "_");
 		file_name = log_path + "/" + file_name; 
 		file_name += log_meta.log_level_strs[static_cast<LogLevel>(idx)] + ".log";
-		fd = open(file_name.c_str(), O_RDWR | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-		if (fd == -1) {
+		file = fopen(file_name.c_str(), "a+");
+		if (file == NULL) {
 			std::cerr << __FILE__ << ":"  << __LINE__ << ", Open " << file_name << " failed" << std::endl;
 			exit(-1);
 		}
 
-		log_meta.log_level_files.insert(std::make_pair(static_cast<LogLevel>(idx), fd));
+		log_meta.log_level_files.insert(std::make_pair(static_cast<LogLevel>(idx), file));
 	}
 }
 
@@ -186,7 +186,7 @@ Log::~Log() {
 	}
 
 	pthread_mutex_lock(log_meta.log_level_mutexes_[self_level_]);
-	if (write(log_meta.log_level_files[self_level_], str.c_str(), str.size()) < 0) {
+	if (fwrite(str.c_str(), str.size(), 1, log_meta.log_level_files[self_level_]) < 1) {
 		 std::cerr << __FILE__ << ":"  << __LINE__ << ", write " << log_meta.log_level_strs[self_level_] << " failed" << std::endl;
 	}
 	pthread_mutex_unlock(log_meta.log_level_mutexes_[self_level_]);
