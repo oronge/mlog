@@ -1,14 +1,17 @@
-#include <iostream>
-#include <utility>
+#include "log.h"
+
+#include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <cstdlib>
+#include <stdlib.h>
 #include <strings.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "log.h"
+#include <iostream>
+#include <utility>
+
 
 namespace mlog {
 
@@ -178,6 +181,9 @@ Log::Log(const LogLevel level) {
 
 Log::~Log() {
 	std::string str = strm_.str();
+  if (str.empty()) {
+    return;
+  }
 
 	if (log_meta.screen_out) {
 		pthread_mutex_lock(log_meta.screen_mutex_);
@@ -186,10 +192,65 @@ Log::~Log() {
 	}
 
 	pthread_mutex_lock(log_meta.log_level_mutexes_[self_level_]);
-	if (fwrite(str.c_str(), str.size(), 1, log_meta.log_level_files[self_level_]) < 1) {
+	if (fwrite(str.c_str(), 1, str.size(), log_meta.log_level_files[self_level_]) < 1) {
 		 std::cerr << __FILE__ << ":"  << __LINE__ << ", write " << log_meta.log_level_strs[self_level_] << " failed" << std::endl;
 	}
 	pthread_mutex_unlock(log_meta.log_level_mutexes_[self_level_]);
+}
+
+int32_t Write(const LogLevel level, const std::string& str) {
+  int32_t ret = 0;
+  if (level < work_level) {
+    return ret;
+  }
+	if (log_meta.screen_out) {
+		pthread_mutex_lock(log_meta.screen_mutex_);
+		std::cerr << str;
+		pthread_mutex_unlock(log_meta.screen_mutex_);
+	}
+
+	pthread_mutex_lock(log_meta.log_level_mutexes_[level]);
+	ret = fwrite(str.c_str(), 1, str.size(), log_meta.log_level_files[level]);
+	pthread_mutex_unlock(log_meta.log_level_mutexes_[level]); 
+  if (ret < 1) {
+		 std::cerr << __FILE__ << ":"  << __LINE__ << ", write " << log_meta.log_level_strs[level] << " failed" << std::endl;
+	}
+  return ret;
+}
+
+int32_t Write(const LogLevel level, const char* format, ...) {
+  static char buf[1024];
+
+  int32_t ret = 0;
+  if (level < work_level) {
+    return ret;
+  }
+  
+  if (log_meta.screen_out) {
+    va_list vl;
+    va_start(vl, format);
+		pthread_mutex_lock(log_meta.screen_mutex_);
+    fprintf(stderr, format, vl); 
+		pthread_mutex_unlock(log_meta.screen_mutex_);
+    va_end(vl);
+  }
+  
+  va_list vl;
+  va_start(vl, format);
+  int32_t len = snprintf(buf, sizeof(buf), format, vl);
+  va_end(vl); 
+  if (len < 0) {
+    return -1;
+  }
+
+	pthread_mutex_lock(log_meta.log_level_mutexes_[level]);
+	ret = fwrite(buf, 1, len, log_meta.log_level_files[level]);
+	pthread_mutex_unlock(log_meta.log_level_mutexes_[level]); 
+  if (ret < 1) {
+		 std::cerr << __FILE__ << ":"  << __LINE__ << ", write " << log_meta.log_level_strs[level] << " failed" << std::endl;
+	}
+  
+  return ret;
 }
 
 }

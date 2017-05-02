@@ -2,12 +2,12 @@
 #define LOG_H
 
 #include <pthread.h>
+#include <stdint.h>
+
 #include <string>
 #include <sstream>
 #include <map>
 
-
-#include <stdint.h>
 namespace mlog {
 
 enum LogLevel {
@@ -42,7 +42,8 @@ bool SetLogLevel(const std::string &level_str);
 bool SetLogDir(const std::string &level_dir);
 
 std::string GetLevelStr();
-
+int32_t Write(const LogLevel level, const std::string& str);
+int32_t Write(const LogLevel level, const char* format, ...);
 }
 
 #define TRACE   mlog::kTrace
@@ -55,5 +56,4 @@ std::string GetLevelStr();
 #define LOG(level) \
 	if (level >= mlog::work_level) \
 		mlog::Log(level).strm()
-
 #endif

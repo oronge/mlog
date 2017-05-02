@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -Wall -W -Wno-unused-parameter -pg -g -O2 -D__STDC_FORMAT_MACROS -fPIC -std=c++11
+CXXFLAGS = -Wall -W -Wno-unused-parameter -pg -g -O3 -D__STDC_FORMAT_MACROS -fPIC -std=c++11
 
 OBJECT = mlog
 OUTPUT = ./output
