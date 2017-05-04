@@ -3,7 +3,7 @@ CXXFLAGS = -Wall -W -Wno-unused-parameter -pg -g -O3 -D__STDC_FORMAT_MACROS -fPI
 
 OBJECT = mlog
 OUTPUT = ./output
-
+INCLUDE_PATH = -I./include
 LIBS = -lpthread
 
 LIBRARY = libmlog.a
@@ -11,9 +11,9 @@ LIBRARY = libmlog.a
 .PHONY: all clean
 
 
-BASE_OBJS := $(wildcard ./*.cc)
-BASE_OBJS += $(wildcard ./*.c)
-BASE_OBJS += $(wildcard ./*.cpp)
+BASE_OBJS := $(wildcard src/*.cc)
+BASE_OBJS += $(wildcard src/*.c)
+BASE_OBJS += $(wildcard src/*.cpp)
 OBJS = $(patsubst %.cc,%.o,$(BASE_OBJS))
 
 all: $(LIBRARY)
@@ -27,7 +27,7 @@ $(LIBRARY): $(OBJS)
 	mkdir $(OUTPUT)/lib
 	rm -rf $@
 	ar -rcs $@ $(OBJS)
-	cp -rf ./*.h $(OUTPUT)/include
+	cp -rf ./include/*.h $(OUTPUT)/include
 	mv ./libmlog.a $(OUTPUT)/lib/
 	make -C ./example
 
@@ -35,10 +35,10 @@ $(OBJECT): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
 
 $(OBJS): %.o : %.cc
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< -o $@ 
 
 $(TOBJS): %.o : %.cc
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< $(INCLUDE_PATH) -o $@ 
 
 clean: 
 	rm -rf ./*.o

@@ -252,4 +252,4 @@ int32_t Write(const LogLevel level, const char* format, ...) {
   
   return ret;
 }
-
+}
