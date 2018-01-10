@@ -4,6 +4,7 @@ CXXFLAGS = -Wall -W -Wno-unused-parameter -pg -g -O3 -D__STDC_FORMAT_MACROS -fPI
 OBJECT = mlog
 OUTPUT = ./output
 INCLUDE_PATH = -I./include
+LIB_PATH = ./lib
 LIBS = -lpthread
 
 LIBRARY = libmlog.a
@@ -21,14 +22,11 @@ all: $(LIBRARY)
 
 
 $(LIBRARY): $(OBJS)
-	rm -rf $(OUTPUT)
-	mkdir $(OUTPUT)
-	mkdir $(OUTPUT)/include
-	mkdir $(OUTPUT)/lib
+	rm -rf $(LIB_PATH)
+	mkdir $(LIB_PATH)
 	rm -rf $@
 	ar -rcs $@ $(OBJS)
-	cp -rf ./include/*.h $(OUTPUT)/include
-	mv ./libmlog.a $(OUTPUT)/lib/
+	mv ./libmlog.a $(LIB_PATH)
 	make -C ./example
 
 $(OBJECT): $(OBJS)
@@ -41,8 +39,8 @@ $(TOBJS): %.o : %.cc
 	$(CXX) $(CXXFLAGS) $(INCLUDE_PATH) -c $< $(INCLUDE_PATH) -o $@ 
 
 clean: 
-	rm -rf ./*.o
-	rm -rf $(OUTPUT)
+	rm -rf src/*.o
+	rm -rf $(LIB_PATH)
 	rm -rf $(LIBRARY)
 	rm -rf $(OBJECT)
 	make clean -C ./example

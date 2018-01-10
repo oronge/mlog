@@ -3,12 +3,12 @@ CXXFLAGS = -pg -g -Wall -Wno-format -g -O3 -std=c++11 -D__XDEBUG__
 
 OBJECT = log_sample log_sample2 log_sample3
 
-LIB_PATH = -L../output/lib/
+LIB_PATH = -L../lib/
 
 LIBS = -lmlog \
 	-lpthread
 
-INCLUDE_PATH = -I../output/include/
+INCLUDE_PATH = -I../include/
 
 OBJS = log_sample.o log_sample2.o log_sample3.o
 
