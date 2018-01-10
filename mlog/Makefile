@@ -27,7 +27,7 @@ $(LIBRARY): $(OBJS)
 	rm -rf $@
 	ar -rcs $@ $(OBJS)
 	mv ./libmlog.a $(LIB_PATH)
-	make -C ./example
+#	make -C ./example
 
 $(OBJECT): $(OBJS)
 	$(CXX) $(CXXFLAGS) -o $@ $^ $(LIBS)
@@ -43,5 +43,5 @@ clean:
 	rm -rf $(LIB_PATH)
 	rm -rf $(LIBRARY)
 	rm -rf $(OBJECT)
-	make clean -C ./example
+#	make clean -C ./example
 
