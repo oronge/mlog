@@ -7,8 +7,14 @@
 #include <string>
 #include <sstream>
 #include <map>
+#include <initializer_list>
+#include <memory>
+
 
 namespace mlog {
+
+#define HOUR_SECONDS                            3600ul
+#define DAY_SECONDS                             86400ul
 
 enum LogLevel {
 	kTrace,
@@ -44,7 +50,18 @@ bool SetLogDir(const std::string &level_dir);
 std::string GetLevelStr();
 int32_t Write(const LogLevel level, const std::string& str);
 int32_t Write(const LogLevel level, const char* format, ...);
+void BackupAndSwitchLog(const std::string& d); 
+
+int32_t Log(const mlog::LogLevel level, const std::initializer_list<std::string>& args); 
+int32_t LogTrace(const std::initializer_list<std::string>& args); 
+int32_t LogDebug(const std::initializer_list<std::string>& args); 
+int32_t LogInfo(const std::initializer_list<std::string>& args); 
+int32_t LogWarn(const std::initializer_list<std::string>& args); 
+int32_t LogError(const std::initializer_list<std::string>& args); 
+int32_t LogFatal(const std::initializer_list<std::string>& args); 
+int32_t LogMaxLevel(const std::initializer_list<std::string>& args); 
 }
+
 
 #define TRACE   mlog::kTrace
 #define DEBUG   mlog::kDebug
@@ -56,4 +73,14 @@ int32_t Write(const LogLevel level, const char* format, ...);
 #define LOG(level) \
 	if (level >= mlog::work_level) \
 		mlog::Log(level).strm()
+
+using mlog::Log;
+using mlog::LogTrace;
+using mlog::LogDebug;
+using mlog::LogInfo;
+using mlog::LogWarn;
+using mlog::LogError;
+using mlog::LogFatal;
+using mlog::LogMaxLevel;
+
 #endif

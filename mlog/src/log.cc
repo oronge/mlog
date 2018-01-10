@@ -1,5 +1,3 @@
-#include "log.h"
-
 #include <stdarg.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -11,7 +9,9 @@
 
 #include <iostream>
 #include <utility>
+#include <atomic>
 
+#include "log.h"
 
 namespace mlog {
 
@@ -131,7 +131,7 @@ void Init(const LogLevel level, const std::string &log_dir, const std::string &f
 
 	std::string file_name;
 	FILE *file;
-	for (int32_t idx = kInfo; idx < kMaxLevel; ++idx) {
+	for (int32_t idx = kTrace; idx < kMaxLevel; ++idx) {
 		file_name = file_prefix.empty() ? "" : (file_prefix + "_");
 		file_name = log_path + "/" + file_name; 
 		file_name += log_meta.log_level_strs[static_cast<LogLevel>(idx)] + ".log";
@@ -252,4 +252,106 @@ int32_t Write(const LogLevel level, const char* format, ...) {
   
   return ret;
 }
+
+void BackupAndSwitchLog(const std::string& d) {
+  std::string date = d;
+  if (date.empty()) { 
+    char buf[64];
+    time_t now = time(NULL);
+    strftime(buf, sizeof(buf), "%Y%m%d", localtime(&now));
+    date.assign(buf, strlen(buf));
+  }
+  
+  std::string backup_dir = log_meta.dir + "/backup";
+  if (access(backup_dir.c_str(), F_OK)) {
+    CreatePath(backup_dir.c_str(), 0775);
+  }
+
+  std::string file_path, back_file_path, file_name;
+  std::string half_file_name = log_meta.file_prefix;
+  if (!half_file_name.empty()) {
+    half_file_name += "_";
+  }
+  
+  for (LogLevel level = kTrace; level < kMaxLevel; level = (LogLevel)(level + 1)) {
+    file_name = half_file_name + log_meta.log_level_strs[static_cast<LogLevel>(level)] + ".log";
+    file_path = log_meta.dir + "/" + file_name;   
+    back_file_path = backup_dir + "/" + file_name + "." + date;
+    /*
+     * not care the successity of rename
+     */
+    rename(file_path.c_str(), back_file_path.c_str());
+    FILE* fp =fopen(file_path.c_str(), "a+");
+    if (!fp) {
+      continue;
+    }
+	  pthread_mutex_lock(log_meta.log_level_mutexes_[level]);
+    fclose(log_meta.log_level_files[level]);
+    log_meta.log_level_files[level] = fp; 
+	  pthread_mutex_unlock(log_meta.log_level_mutexes_[level]);
+  }
+}
+
+inline static void SwitchDateLog(const time_t now) {
+  static std::atomic<uint32_t> cur_date((time(NULL)+8*HOUR_SECONDS) / DAY_SECONDS); /* 0s <---> 1970年 01月 01日 星期四 08:00:00 CST*/
+  uint32_t now_date = (now+8*HOUR_SECONDS) / DAY_SECONDS;
+  if (now_date == cur_date) {
+    return;
+  }
+  uint32_t date_start = cur_date; 
+  if (cur_date.compare_exchange_strong(date_start, now_date)) {
+    char buf[16];
+    time_t backup_time = static_cast<time_t>(date_start) * DAY_SECONDS + 1;
+    strftime(buf, sizeof(buf), "%Y%m%d", localtime(&backup_time)); /* plus 1 is for safe */
+    mlog::BackupAndSwitchLog(std::string(buf));
+  }
+}
+
+int32_t Log(const mlog::LogLevel level, const std::initializer_list<std::string>& args) {
+	static char time_buf[64];
+  
+	time_t now = time(NULL);
+  SwitchDateLog(now);
+  
+	strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S    ", localtime(&now));
+	std::string line(time_buf, strlen(time_buf));
+	line.append("|");
+
+	for (const std::string& arg : args) {
+		line.append(arg);
+		line.append("|");
+	}
+	line.append("\n");
+	mlog::Write(level, line);
+	return 0;
+}
+
+int32_t LogTrace(const std::initializer_list<std::string>& args) {
+  return Log(kTrace, args);
+}
+
+int32_t LogDebug(const std::initializer_list<std::string>& args) {
+  return Log(kDebug, args);
+}
+
+int32_t LogInfo(const std::initializer_list<std::string>& args) {
+  return Log(kInfo, args);
+}
+
+int32_t LogWarn(const std::initializer_list<std::string>& args) {
+  return Log(kWarn, args);
+}
+
+int32_t LogError(const std::initializer_list<std::string>& args) {
+  return Log(kError, args);
+}
+
+int32_t LogFatal(const std::initializer_list<std::string>& args) {
+  return Log(kFatal, args);
+}
+
+int32_t LogMaxLevel(const std::initializer_list<std::string>& args) {
+  return Log(kMaxLevel, args);
+}
+
 }
